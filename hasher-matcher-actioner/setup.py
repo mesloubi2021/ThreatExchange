@@ -14,7 +14,7 @@ extras_require = {
 all_extras = set(sum(extras_require.values(), []))
 extras_require["test"] = sorted({"pytest==6.2.1", "freezegun==1.1.0"} | all_extras)
 extras_require["package"] = ["wheel"]
-extras_require["lint"] = ["black==22.3.0"]
+extras_require["lint"] = ["black==24.3.0"]
 extras_require["type"] = ["types-requests==2.27.1", "types-freezegun==1.1.7"]
 extras_require["all"] = sorted(set(sum(extras_require.values(), [])))
 
@@ -29,7 +29,7 @@ setup(
         "apig-wsgi==2.13.0",
         "pyjwt[crypto]==2.4.0",
         "methodtools==0.4.5",
-        "requests==2.31.0",
+        "requests==2.32.2",
     ],
     extras_require=extras_require,
     entry_points={

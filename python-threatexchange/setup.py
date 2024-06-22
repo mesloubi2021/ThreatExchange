@@ -56,11 +56,11 @@ setup(
     packages=find_packages(exclude=["tests*"]),
     install_requires=[
         "python-Levenshtein==0.20.9",
-        "requests==2.31.0",
-        "urllib3==1.26.18",  # For allow_methods
+        "requests==2.32.2",
+        "urllib3==1.26.19",  # For allow_methods
         "python-dateutil==2.8.2",
         "dacite==1.7.0",  # 0.18.0 broken our tests due to faulty caching
-        "Pillow==10.0.1",  # pdq
+        "Pillow==10.3.0",  # pdq
         "pdqhash==0.2.3",  # pdq
         "faiss-cpu==1.7.3",  # faiss
         "numpy==1.24.2",  # faiss
