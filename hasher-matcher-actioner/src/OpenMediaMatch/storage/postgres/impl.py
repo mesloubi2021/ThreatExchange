@@ -37,6 +37,7 @@ from threatexchange.exchanges.fetch_state import (
 )
 
 from OpenMediaMatch.storage import interface
+from threatexchange.cli.storage.interfaces import SignalTypeConfig
 from OpenMediaMatch.storage.postgres import database, flask_utils
 
 
@@ -140,12 +141,12 @@ class DefaultOMMStore(interface.IUnifiedStore):
         sesh.add(config)
         sesh.commit()
 
-    def get_signal_type_configs(self) -> t.Mapping[str, interface.SignalTypeConfig]:
+    def get_signal_type_configs(self) -> t.Mapping[str, SignalTypeConfig]:
         # If a signal is installed, then it is enabled by default. But it may be disabled by an
         # override in the database.
         signal_type_overrides = self._query_signal_type_overrides()
         return {
-            name: interface.SignalTypeConfig(
+            name: SignalTypeConfig(
                 signal_type_overrides.get(name, 1.0),
                 st,
             )
@@ -189,7 +190,9 @@ class DefaultOMMStore(interface.IUnifiedStore):
             )
         ).scalar_one_or_none()
 
-        return db_record.load_signal_index() if db_record is not None else None
+        if db_record is None or not db_record.index_lobj_exists():
+            return None
+        return db_record.load_signal_index()
 
     def store_signal_type_index(
         self,
@@ -213,22 +216,15 @@ class DefaultOMMStore(interface.IUnifiedStore):
     def get_last_index_build_checkpoint(
         self, signal_type: t.Type[SignalType]
     ) -> t.Optional[interface.SignalTypeIndexBuildCheckpoint]:
-        row = database.db.session.execute(
-            select(
-                database.SignalIndex.updated_to_ts,
-                database.SignalIndex.updated_to_id,
-                database.SignalIndex.signal_count,
-            ).where(database.SignalIndex.signal_type == signal_type.get_name())
-        ).one_or_none()
+        db_record = database.db.session.execute(
+            select(database.SignalIndex).where(
+                database.SignalIndex.signal_type == signal_type.get_name()
+            )
+        ).scalar_one_or_none()
 
-        if row is None:
+        if db_record is None or not db_record.index_lobj_exists():
             return None
-        updated_to_ts, updated_to_id, total_count = row._tuple()
-        return interface.SignalTypeIndexBuildCheckpoint(
-            last_item_timestamp=updated_to_ts,
-            last_item_id=updated_to_id,
-            total_hash_count=total_count,
-        )
+        return db_record.as_checkpoint()
 
     # Collabs
     def exchange_update(
@@ -566,11 +562,13 @@ class DefaultOMMStore(interface.IUnifiedStore):
         sesh.commit()
         return content.id
 
-    def bank_remove_content(self, bank_name: str, content_id: int) -> None:
-        database.db.session.execute(
+    def bank_remove_content(self, bank_name: str, content_id: int) -> int:
+        # TODO: throw an exception if deleting imported content
+        result = database.db.session.execute(
             delete(database.BankContent).where(database.BankContent.id == content_id)
         )
         database.db.session.commit()
+        return result.rowcount
 
     def get_current_index_build_target(
         self, signal_type: t.Type[SignalType]

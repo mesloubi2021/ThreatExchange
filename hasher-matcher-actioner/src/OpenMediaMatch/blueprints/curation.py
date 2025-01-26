@@ -1,3 +1,5 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+
 import re
 import typing as t
 
@@ -210,6 +212,20 @@ def _bank_add_signals(
     }
 
 
+@bp.route("/bank/<bank_name>/content/<content_id>", methods=["DELETE"])
+def bank_delete_content(bank_name: str, content_id: int):
+    """
+    Remove a signal from a bank.
+    """
+    storage = persistence.get_storage()
+    bank = storage.get_bank(bank_name)
+    if not bank:
+        abort(404, f"bank '{bank_name}' not found")
+
+    count = storage.bank_remove_content(bank.name, content_id)
+    return {"deleted": count}
+
+
 @bp.route("/bank/<bank_name>/signal", methods=["POST"])
 def bank_add_as_signals(bank_name: str):
     """
@@ -283,7 +299,7 @@ def exchange_create():
     api_type_name = data.get("api")
 
     if not re.match("^[A-Z0-9_]+$", bank):
-        abort(400, "Field `bank` must match /^[A-Z0-9_]$/")
+        abort(400, "Field `bank` must match /^[A-Z0-9_]+$/")
 
     if not isinstance(api_json, dict):
         abort(400, "Field `api_json` must be object")
